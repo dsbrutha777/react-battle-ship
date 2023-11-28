@@ -74,6 +74,6 @@
     @apply bg-background text-foreground h-screen;
   }
   #root {
-    @apply h-full;
+    @apply h-[calc(100%-64px)];
   }
 }

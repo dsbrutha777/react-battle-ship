@@ -16,6 +16,18 @@ module.exports = {
       },
     },
     extend: {
+      gridTemplateAreas: {
+        'gameBoard': [
+          ". xaxis",
+          "yaxis board",
+        ]
+      },
+      gridTemplateColumns: {
+        'gameBoard': 'auto 1fr'
+      },
+      gridTemplateRows: {
+        'gameBoard': 'auto 1fr'
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -72,5 +84,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require('@savvywombat/tailwindcss-grid-areas')],
 }

@@ -10,7 +10,6 @@ import CreateRoom from './components/pages/create-room'
 import GameRoom from './components/pages/game-room'
 import JoinRoom from './components/pages/join-room'
 import { ThemeProvider } from "@/components/theme-provider"
-import { ModeToggle } from '@/components/ui/mode-toggle'
 import { TopBar } from '@/components/ui/top-bar'
 import { Toaster } from '@/components/ui/toaster'
 import './index.css'

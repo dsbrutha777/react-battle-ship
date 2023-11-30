@@ -36,13 +36,13 @@ function App() {
   return (
     <div className="grid grid-rows-[1fr_2fr_1fr] grid-cols-1 h-full">
       <header className="flex flex-col justify-center items-center">
-        <h1 className="text-4xl">Battle Ship</h1>
+        <h1 className="text-5xl font-black">Battle Ship</h1>
       </header>
 
       <main className="flex justify-center items-center gap-8">
-        <Button onClick={handleCreateRoomClick} size="lg">Create Room</Button>
-        <Button onClick={handleJoinRoomClick} size="lg">Join Room</Button>
-        <Button onClick={handleGameRoomClick} size="lg">Game Room</Button>
+        <Button className="font-black" onClick={handleCreateRoomClick} size="lg">Create Room</Button>
+        <Button className="font-black" onClick={handleJoinRoomClick} size="lg">Join Room</Button>
+        <Button className="font-black" onClick={handleGameRoomClick} size="lg">Game Room</Button>
       </main>
 
       <footer>

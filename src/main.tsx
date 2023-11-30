@@ -11,38 +11,36 @@ import GameRoom from './components/pages/game-room'
 import JoinRoom from './components/pages/join-room'
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from '@/components/ui/mode-toggle'
+import { TopBar } from '@/components/ui/top-bar'
 import { Toaster } from '@/components/ui/toaster'
 import './index.css'
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />,
+    element: <TopBar><App /></TopBar>,
   },
   {
     path: '/create-room',
-    element: <CreateRoom />,
+    element: <TopBar><CreateRoom /></TopBar>,
   },
   {
     path: '/join-room',
-    element: <JoinRoom />,
+    element: <TopBar><JoinRoom /></TopBar>,
   },
   {
     path: '/game-room',
-    element: <GameRoom />,
+    element: <TopBar><GameRoom /></TopBar>,
   },
   {
     path: '*',
-    element: <NotFound />,
+    element: <TopBar><NotFound /></TopBar>,
   }
 ]);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div className="flex justify-end p-3">
-        <ModeToggle />
-      </div>
       <RouterProvider router={router} />
       <Toaster />
     </ThemeProvider>

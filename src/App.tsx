@@ -30,6 +30,9 @@ function App() {
   const handleJoinRoomClick = () => {
     navigate('/join-room');
   }
+  const handleGameRoomClick = () => {
+    navigate('/game-room');
+  }
   return (
     <div className="grid grid-rows-[1fr_2fr_1fr] grid-cols-1 h-full">
       <header className="flex flex-col justify-center items-center">
@@ -39,6 +42,7 @@ function App() {
       <main className="flex justify-center items-center gap-8">
         <Button onClick={handleCreateRoomClick} size="lg">Create Room</Button>
         <Button onClick={handleJoinRoomClick} size="lg">Join Room</Button>
+        <Button onClick={handleGameRoomClick} size="lg">Game Room</Button>
       </main>
 
       <footer>

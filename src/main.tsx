@@ -11,6 +11,7 @@ import GameRoom from './components/pages/game-room'
 import JoinRoom from './components/pages/join-room'
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from '@/components/ui/mode-toggle'
+import { Toaster } from '@/components/ui/toaster'
 import './index.css'
 
 const router = createBrowserRouter([
@@ -43,6 +44,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ModeToggle />
       </div>
       <RouterProvider router={router} />
+      <Toaster />
     </ThemeProvider>
   </React.StrictMode>,
 )

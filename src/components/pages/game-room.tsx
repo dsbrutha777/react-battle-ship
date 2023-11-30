@@ -94,6 +94,7 @@ function GameRoom() {
     for (let i = 0; i < shipSize; i++) {
       const cellElement = document.querySelector(`[data-key="cell-${cellIndex + nextCellCount * i}"]`);
       if (cellElement) {
+        cellElement.classList.remove('bg-sky-500');
         cellElement.classList.add('bg-green-500', 'font-black');
         cellElement.innerHTML = shipSize.toString();
       }

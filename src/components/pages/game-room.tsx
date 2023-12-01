@@ -3,17 +3,7 @@ import { GRID_SIZE } from "@/utility/constants";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast"
-
-enum ShipType {
-  SUBWAY = 2,
-  DESTROYER = 3,
-  CRUISER = 4,
-  BATTLESHIP = 5,
-}
-enum Direction {
-  HORIZONTAL = 1,
-  VERTICAL = 2,
-}
+import { ShipSize, Direction } from '@/enums'
 
 function GameRoom() {
   const { toast } = useToast()
@@ -30,29 +20,29 @@ function GameRoom() {
   const shipTypes = useMemo(() => ([
     {
       label: 'Subway',
-      value: ShipType.SUBWAY
+      value: ShipSize.SUBWAY
     },
     {
       label: 'Destroyer',
-      value: ShipType.DESTROYER
+      value: ShipSize.DESTROYER
     },
     {
       label: 'Cruiser',
-      value: ShipType.CRUISER
+      value: ShipSize.CRUISER
     },
     {
       label: 'Battleship',
-      value: ShipType.BATTLESHIP
+      value: ShipSize.BATTLESHIP
     }
   ]), []);
   
   const [direction, setDirection] = useState(Direction.HORIZONTAL);
-  const [shipSize, setShipSize] = useState(ShipType.SUBWAY);
+  const [shipSize, setShipSize] = useState(ShipSize.SUBWAY);
   const [isPlacedShip, setIsPlacedShip] = useState({
-    [ShipType.SUBWAY]: false,
-    [ShipType.DESTROYER]: false,
-    [ShipType.CRUISER]: false,
-    [ShipType.BATTLESHIP]: false,
+    [ShipSize.SUBWAY]: false,
+    [ShipSize.DESTROYER]: false,
+    [ShipSize.CRUISER]: false,
+    [ShipSize.BATTLESHIP]: false,
   });
   const nextCellCount = useMemo(() => direction === Direction.HORIZONTAL ? 1 : GRID_SIZE, [direction]);
   const xAxis = useMemo(() => Array.from({ length: GRID_SIZE }), []); // create 10 rows
@@ -203,7 +193,7 @@ function GameRoom() {
     <div className="flex flex-col justify-center items-center gap-4">
       <div className="flex flex-col gap-4">
         <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
-          {shipTypes.map((type: { label: string, value: ShipType }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} onClick={() => setShipSize(type.value)}>{type.label}</ToggleGroupItem>)}
+          {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} onClick={() => setShipSize(type.value)}>{type.label}</ToggleGroupItem>)}
         </ToggleGroup>
         <ToggleGroup variant="outline" size="lg" type="single" value={direction.toString()}>
           {directions.map((direction: { label: string, value: Direction }) => <ToggleGroupItem className="grow" key={`${direction.label}-${direction.value}`} value={direction.value.toString()} onClick={() => setDirection(direction.value)}>{direction.label}</ToggleGroupItem>)}

@@ -10,6 +10,5 @@ export enum Direction {
 }
 export enum RoomStatus {
   "WAIT" = "WAIT",
-  "READY" = "READY",
   "PLAYING" = "PLAYING"
 }

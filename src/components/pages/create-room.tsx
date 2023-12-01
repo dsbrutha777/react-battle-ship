@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback , useMemo} from "react";
-import { useBlocker, useParams } from "react-router-dom";
+import { useEffect, useState, useCallback , useMemo } from "react";
+import { useBlocker, useParams, useNavigate } from "react-router-dom";
 import { initializeApp } from "firebase/app";
-import { ref, remove, getDatabase } from "firebase/database";
+import { ref, remove, onValue, getDatabase } from "firebase/database";
 import { firebaseConfig } from "@/firebase-config";
+import { RoomStatus } from "@/enums";
+import { useToast } from '@/components/ui/use-toast'
 
 import {
   AlertDialog,
@@ -18,10 +20,27 @@ import {
 const app = initializeApp(firebaseConfig);
 
 function CreateRoom() {
+  const { toast } = useToast()
+  const navigate = useNavigate();
   const params = useParams();
   const db = useMemo(() => getDatabase(app), []);
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
-  let blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== '/game-room');
+
+  useEffect(() => {
+    const roomsRef = ref(db, `rooms/${params.roomId}`);
+    return onValue(roomsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data.status === RoomStatus.PLAYING) {
+        const now = new Date();
+        toast({
+          title: "Let's start the game!",
+          description: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
+        });
+        navigate(`/game-room/${params.roomId}`);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (blocker.state === 'blocked') {

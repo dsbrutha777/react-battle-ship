@@ -28,7 +28,7 @@ const router = createBrowserRouter([
     element: <TopBar><JoinRoom /></TopBar>,
   },
   {
-    path: '/game-room',
+    path: '/game-room/:roomId',
     element: <TopBar><GameRoom /></TopBar>,
   },
   {
@@ -38,10 +38,8 @@ const router = createBrowserRouter([
 ]);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <RouterProvider router={router} />
-      <Toaster />
-    </ThemeProvider>
-  </React.StrictMode>,
+  <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <RouterProvider router={router} />
+    <Toaster />
+  </ThemeProvider>,
 )

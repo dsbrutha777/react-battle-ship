@@ -25,7 +25,7 @@ function CreateRoom() {
   const params = useParams();
   const db = useMemo(() => getDatabase(app), []);
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== '/game-room');
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== `/game-room/${params.roomId}`);
 
   useEffect(() => {
     const roomsRef = ref(db, `rooms/${params.roomId}`);

@@ -1,11 +1,35 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { GRID_SIZE } from "@/utility/constants";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast"
 import { ShipSize, Direction } from '@/enums'
+import { useBlocker, useParams, useNavigate } from 'react-router-dom'
+
+import { initializeApp } from "firebase/app";
+import { ref, remove, onValue, getDatabase } from "firebase/database";
+import { firebaseConfig } from "@/firebase-config";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog"
+
+const app = initializeApp(firebaseConfig);
 
 function GameRoom() {
+  const leaveFlgRef = useRef(false);
+  const db = useMemo(() => getDatabase(app), []);
+  const navigate = useNavigate();
+  const params = useParams();
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== `/`);
   const { toast } = useToast()
   const directions = useMemo(() => ([
     {
@@ -189,55 +213,107 @@ function GameRoom() {
     })
   }, []);
 
-  return (
-    <div className="flex flex-col justify-center items-center gap-4">
-      <div className="flex flex-col gap-4">
-        <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
-          {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} onClick={() => setShipSize(type.value)}>{type.label}</ToggleGroupItem>)}
-        </ToggleGroup>
-        <ToggleGroup variant="outline" size="lg" type="single" value={direction.toString()}>
-          {directions.map((direction: { label: string, value: Direction }) => <ToggleGroupItem className="grow" key={`${direction.label}-${direction.value}`} value={direction.value.toString()} onClick={() => setDirection(direction.value)}>{direction.label}</ToggleGroupItem>)}
-        </ToggleGroup>
-      </div>
-      <div className="grid grid-areas-gameBoard grid-cols-gameBoard grid-rows-gameBoard gap-4">
-        <div className="grid-in-xaxis">
-          <div className="grid grid-cols-10 place-items-center w-[500px]">
-            {xAxis.map((_, index) => (<div key={`xaxis-${index}`}>{index}</div>))}
-          </div>
-        </div>
-        <div className="grid-in-yaxis">
-          <div className="grid grid-rows-10 place-items-center h-[500px]">
-            {yAxis.map((_, index) => (<div key={`yaxis-${getYCoordinate(index)}`}>{getYCoordinate(index)}</div>))}
-          </div>
-        </div>
-        <div className="grid-in-board">
-          <div className="grid grid-cols-10 grid-rows-10 border-2 border-solid w-[500px] h-[500px] divide-x divide-y divide-slate-500 border-slate-500 ">
-            {
-            cells.map((_, index) => (
-              <div
-                key={`cell-${index}`}
-                data-key={`cell-${index}`}
-                className="flex justify-center items-center"
-                onClick={() => handleCellClick(index)}
-                onMouseEnter={() => handleMouseEnter(index)}
-                onMouseLeave={() => handleMouseLeave(index)}
-              >
-                *
-              </div>
-              ))
-            }
-          </div>
-        </div>
-      </div>
-      <Button disabled={!isPlacedShip[shipSize]} onClick={handleShipPlacedRevert} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Revert</Button>
-      {
-        isAllShipPlaced && 
-        <div className="flex flex-col gap-4">
-          <h1 className="text-5xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500 mt-10">I am Ready.</h1>
-          <Button className="bg-gradient-to-r from-sky-500 to-blue-500 font-black" onClick={handleConfirm}>Confirm</Button>
-        </div>
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setIsAlertDialogOpen(true);
+    }
+  }, [blocker]);
+
+  const handleBlockerCancelClick = useCallback((blocker: any) => {
+    blocker.reset();
+  }, []);
+  const handleBlockerContinueClick = useCallback(async (blocker: any) => {
+    leaveFlgRef.current = true;
+
+    const { roomId } = params;
+    const roomsRef = ref(db, `rooms/${roomId}`);
+    await remove(roomsRef);
+
+    blocker.proceed();
+  }, []);
+
+  useEffect(() => {
+    const roomsRef = ref(db, `rooms/${params.roomId}`);
+    return onValue(roomsRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        if (!leaveFlgRef.current) {
+          toast({
+            title: "The room is not exist.",
+            description: "Haha! Your oppenont is a coward!",
+          });
+        }
+
+        leaveFlgRef.current = false; // reset this flag
+        navigate('/')
       }
-    </div>
+    });
+  }, []);
+
+  return (
+    <>
+      <div className="flex flex-col justify-center items-center gap-4">
+        <div className="flex flex-col gap-4">
+          <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
+            {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} onClick={() => setShipSize(type.value)}>{type.label}</ToggleGroupItem>)}
+          </ToggleGroup>
+          <ToggleGroup variant="outline" size="lg" type="single" value={direction.toString()}>
+            {directions.map((direction: { label: string, value: Direction }) => <ToggleGroupItem className="grow" key={`${direction.label}-${direction.value}`} value={direction.value.toString()} onClick={() => setDirection(direction.value)}>{direction.label}</ToggleGroupItem>)}
+          </ToggleGroup>
+        </div>
+        <div className="grid grid-areas-gameBoard grid-cols-gameBoard grid-rows-gameBoard gap-4">
+          <div className="grid-in-xaxis">
+            <div className="grid grid-cols-10 place-items-center w-[500px]">
+              {xAxis.map((_, index) => (<div key={`xaxis-${index}`}>{index}</div>))}
+            </div>
+          </div>
+          <div className="grid-in-yaxis">
+            <div className="grid grid-rows-10 place-items-center h-[500px]">
+              {yAxis.map((_, index) => (<div key={`yaxis-${getYCoordinate(index)}`}>{getYCoordinate(index)}</div>))}
+            </div>
+          </div>
+          <div className="grid-in-board">
+            <div className="grid grid-cols-10 grid-rows-10 border-2 border-solid w-[500px] h-[500px] divide-x divide-y divide-slate-500 border-slate-500 ">
+              {
+              cells.map((_, index) => (
+                <div
+                  key={`cell-${index}`}
+                  data-key={`cell-${index}`}
+                  className="flex justify-center items-center"
+                  onClick={() => handleCellClick(index)}
+                  onMouseEnter={() => handleMouseEnter(index)}
+                  onMouseLeave={() => handleMouseLeave(index)}
+                >
+                  *
+                </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+        <Button disabled={!isPlacedShip[shipSize]} onClick={handleShipPlacedRevert} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Revert</Button>
+        {
+          isAllShipPlaced && 
+          <div className="flex flex-col gap-4">
+            <h1 className="text-5xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500 mt-10">I am Ready.</h1>
+            <Button className="bg-gradient-to-r from-sky-500 to-blue-500 font-black" onClick={handleConfirm}>Confirm</Button>
+          </div>
+        }
+      </div>
+      <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Room {params.roomId}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave and remove the room?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleBlockerCancelClick(blocker)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleBlockerContinueClick(blocker)}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

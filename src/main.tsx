@@ -20,7 +20,7 @@ const router = createBrowserRouter([
     element: <TopBar><App /></TopBar>,
   },
   {
-    path: '/create-room',
+    path: '/create-room/:roomId',
     element: <TopBar><CreateRoom /></TopBar>,
   },
   {

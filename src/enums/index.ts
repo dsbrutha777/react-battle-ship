@@ -8,3 +8,8 @@ export enum Direction {
   HORIZONTAL = "HORIZONTAL",
   VERTICAL = "VERTICAL"
 }
+export enum RoomStatus {
+  "WAIT" = "WAIT",
+  "READY" = "READY",
+  "PLAYING" = "PLAYING"
+}

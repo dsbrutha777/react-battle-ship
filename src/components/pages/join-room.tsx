@@ -18,17 +18,17 @@ function JoinRoom() {
   const { toast } = useToast()
   const navigate = useNavigate();
   const db = useMemo(() => getDatabase(app), []);
-  const [roomNumber, setRoomNumber] = useState('');
+  const [roomId, setRoomId] = useState('');
 
   // 將時間格式化的邏輯提取為一個函數
-const formatCurrentDateTime = () => {
-  const now = new Date();
-  return `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-};
+  const formatCurrentDateTime = () => {
+    const now = new Date();
+    return `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+  };
 
 // 新增函數處理房間加入邏輯
-  const handleRoomJoining = async (roomNumber: string, playerName: string) => {
-    const roomsRef = ref(db, `rooms/${roomNumber}`);
+  const handleRoomJoining = async (roomId: string, newPlayer: PlayerModel) => {
+    const roomsRef = ref(db, `rooms/${roomId}`);
     const snapshot = await get(roomsRef);
 
     if (!snapshot.exists()) {
@@ -40,7 +40,7 @@ const formatCurrentDateTime = () => {
     }
 
     const existingPlayers = snapshot.val().players;
-    const newPlayer = new PlayerModel({ id: uuidv4(), name: playerName || '' });
+    // const newPlayer = new PlayerModel({ id: uuidv4(), name: playerName || '' });
 
     // 更新 Firebase 中的房間信息
     set(roomsRef, {
@@ -54,23 +54,29 @@ const formatCurrentDateTime = () => {
       title: "Let's start the game!",
       description: formatCurrentDateTime(),
     });
-    navigate(`/game-room/${roomNumber}`);
+    navigate(`/game-room/${roomId}`);
   };
 
-  // 使用 useCallback 包裝函數
-  const handleJoinRoomClick = useCallback(() => {
-    const playerName = searchParams.get('playerName') || '';
-    handleRoomJoining(roomNumber, playerName).catch(error => {
+  const handleJoinRoomClick = useCallback(async () => {
+    // const playerName = searchParams.get('playerName') || '';
+    const playerId = sessionStorage.getItem('playerId') || '';
+
+    const db = getDatabase(app);
+    const playerRef = ref(db, `players/${playerId}`);
+    const snapshot = await get(playerRef);
+    const player = new PlayerModel(snapshot.val());
+    
+    handleRoomJoining(roomId, player).catch(error => {
       console.error('Error joining room:', error);
     });
-  }, [roomNumber, searchParams]);
+  }, [roomId, searchParams]);
   const handleRoomChangeChange = useCallback((e: any) => {
-    setRoomNumber(e.target.value);
-  }, [roomNumber]);
+    setRoomId(e.target.value);
+  }, [roomId]);
   return (
     <div className="flex flex-col justify-center items-center gap-4">
       <Input placeholder="Enter Room Number" onChange={handleRoomChangeChange} className="w-1/2" />
-      <Button onClick={handleJoinRoomClick} disabled={!Boolean(roomNumber)}>Join Room</Button>
+      <Button onClick={handleJoinRoomClick} disabled={!Boolean(roomId)}>Join Room</Button>
     </div>
   );
 }

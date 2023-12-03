@@ -4,10 +4,11 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast"
 import { ShipSize, Direction } from '@/enums'
+import { PlayerModel } from '@/models'
 import { useBlocker, useParams, useNavigate } from 'react-router-dom'
 
 import { initializeApp } from "firebase/app";
-import { ref, remove, onValue, getDatabase } from "firebase/database";
+import { ref, get, remove, onValue, getDatabase } from "firebase/database";
 import { firebaseConfig } from "@/firebase-config";
 
 import {
@@ -24,6 +25,8 @@ import {
 const app = initializeApp(firebaseConfig);
 
 function GameRoom() {
+  const [player, setPlayer] = useState<PlayerModel>();
+  const [oppenont, setOppenont] = useState<PlayerModel>();
   const leaveFlgRef = useRef(false);
   const db = useMemo(() => getDatabase(app), []);
   const navigate = useNavigate();
@@ -214,6 +217,26 @@ function GameRoom() {
   }, []);
 
   useEffect(() => {
+    const playerId = sessionStorage.getItem('playerId') || '';
+    const playerRef = ref(db, `players/${playerId}`);
+    return onValue(playerRef, (snapshot) => {
+      const data = snapshot.val();
+      setPlayer(new PlayerModel(data));
+
+      const roomsRef = ref(db, `rooms/${params.roomId}`);
+      return onValue(roomsRef, (snapshot) => {
+        const data = snapshot.val();
+        const oppenontId = data.players.find((player: PlayerModel) => player.id !== playerId)?.id;
+        const oppenontRef = ref(db, `players/${oppenontId}`);
+        return onValue(oppenontRef, (snapshot) => {
+          const data = snapshot.val();
+          setOppenont(new PlayerModel(data));
+        });
+      });
+    });
+  }, []);
+
+  useEffect(() => {
     if (blocker.state === 'blocked') {
       setIsAlertDialogOpen(true);
     }
@@ -227,6 +250,15 @@ function GameRoom() {
 
     const { roomId } = params;
     const roomsRef = ref(db, `rooms/${roomId}`);
+    
+    const snapshot = await get(roomsRef);
+    const players = snapshot.val().players;
+
+    players.forEach(async (player: PlayerModel) => {
+      const playerRef = ref(db, `players/${player.id}`);
+      await remove(playerRef);
+    });
+
     await remove(roomsRef);
   }, []);
 
@@ -250,6 +282,11 @@ function GameRoom() {
   return (
     <>
       <div className="flex flex-col justify-center items-center gap-4">
+        <div className="flex flex-row justify-between items-end gap-16">
+            <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500">{player?.name}</span>
+            <span className="text-2xl text-slate-300">vs</span>
+            <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">{oppenont?.name}</span>
+        </div>
         <div className="flex flex-col gap-4">
           <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
             {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} onClick={() => setShipSize(type.value)}>{type.label}</ToggleGroupItem>)}

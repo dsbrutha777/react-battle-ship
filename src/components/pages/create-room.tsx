@@ -40,7 +40,7 @@ function CreateRoom() {
         navigate(`/game-room/${params.roomId}`);
       }
     });
-  }, []);
+  }, [params]);
 
   useEffect(() => {
     if (blocker.state === 'blocked') {

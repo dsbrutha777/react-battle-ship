@@ -18,7 +18,6 @@ export interface IShip {
 }
 export interface IRoom {
   id: string;
-  name: string;
   players: IPlayer[];
   status: RoomStatus;
 }

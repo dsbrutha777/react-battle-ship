@@ -9,52 +9,64 @@ import { initializeApp } from "firebase/app";
 import { getDatabase, ref, get, set } from "firebase/database";
 import { firebaseConfig } from "@/firebase-config";
 
-import { RoomModel } from "@/models"
+import { IPlayer } from "@/interfaces";
+import { RoomModel, PlayerModel } from "@/models"
 import { RoomStatus } from "@/enums";
 import { v4 as uuidv4 } from 'uuid';
-import { genRamdomRoomNumber } from "@/utility/utils";
+import { genRamdomRoomId } from "@/utility/utils";
 
 const app = initializeApp(firebaseConfig);
 
 function App() {
   const [playerName, setPlayerName] = useState('');
   const navigate = useNavigate();
-
-  const handleCreateRoomClick = async () => {
-    // Create Room
-    const roomId = uuidv4();
-    const roomNumber = genRamdomRoomNumber();
+  const createPlayer = useCallback(async (name: string) => {
     const db = getDatabase(app);
-    const roomsRef = ref(db, `rooms/${roomNumber}`);
+    const id = uuidv4();
+    const playersRef = ref(db, `players/${id}`);
+    const param = { id, name }
+    const newPlayer = new PlayerModel(param)
+    await set(playersRef, newPlayer);
+
+    sessionStorage.setItem('playerId', newPlayer.id);
+
+    return newPlayer;
+  }, []);
+  const createRoom = useCallback(async (roomOwner: IPlayer) => {
+    const db = getDatabase(app);
+    const roomId = genRamdomRoomId();
+    const roomsRef = ref(db, `rooms/${roomId}`);
 
     const snapshot = await get(roomsRef);
     if (snapshot.exists()) {
-      handleCreateRoomClick();
+      createRoom(roomOwner);
       return;
     }
     
-    const data = {
+    const param = {
       id: roomId,
-      name: roomNumber,
-      players: [
-        {
-          id: uuidv4(),
-          name: playerName
-        }
-      ],
+      players: [roomOwner],
       status: RoomStatus.WAIT
     };
-    const newRoom = new RoomModel(data);
+    const newRoom = new RoomModel(param);
     await set(roomsRef, newRoom);
 
-    navigate(`/create-room/${newRoom.name}`);
-  };
-  const handleJoinRoomClick = () => {
-    navigate(`/join-room?playerName=${playerName}`);
-  }
-  const handleGameRoomClick = () => {
-    navigate('/game-room');
-  }
+    return newRoom;
+  }, []);
+  const handleCreateRoomClick = useCallback(async () => {
+    // Create Player
+    const player = await createPlayer(playerName);
+    // Create Room
+    const room = await createRoom(player);
+
+    navigate(`/create-room/${room?.id}`);
+  }, [playerName]);
+  const handleJoinRoomClick = useCallback(async () => {
+    // Create Player
+    await createPlayer(playerName);
+
+    navigate(`/join-room`);
+  }, [playerName]);
   const handleNameChange = useCallback((e: any) => {
     setPlayerName(e.target.value);
   }, []);
@@ -71,7 +83,6 @@ function App() {
         <div className="flex flex-row gap-8">
           <Button className="font-black" onClick={handleCreateRoomClick} size="lg" disabled={!Boolean(playerName)}>Create Room</Button>
           <Button className="font-black" onClick={handleJoinRoomClick} size="lg" disabled={!Boolean(playerName)}>Join Room</Button>
-          <Button className="font-black" onClick={handleGameRoomClick} size="lg" disabled={!Boolean(playerName)}>Game Room</Button>
         </div>
       </main>
 

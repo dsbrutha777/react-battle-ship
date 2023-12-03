@@ -17,7 +17,7 @@ import { genRamdomRoomNumber } from "@/utility/utils";
 const app = initializeApp(firebaseConfig);
 
 function App() {
-  const [name, setName] = useState('');
+  const [playerName, setPlayerName] = useState('');
   const navigate = useNavigate();
 
   const handleCreateRoomClick = async () => {
@@ -36,7 +36,12 @@ function App() {
     const data = {
       id: roomId,
       name: roomNumber,
-      players: [],
+      players: [
+        {
+          id: uuidv4(),
+          name: playerName
+        }
+      ],
       status: RoomStatus.WAIT
     };
     const newRoom = new RoomModel(data);
@@ -45,13 +50,13 @@ function App() {
     navigate(`/create-room/${newRoom.name}`);
   };
   const handleJoinRoomClick = () => {
-    navigate('/join-room');
+    navigate(`/join-room?playerName=${playerName}`);
   }
   const handleGameRoomClick = () => {
     navigate('/game-room');
   }
   const handleNameChange = useCallback((e: any) => {
-    setName(e.target.value);
+    setPlayerName(e.target.value);
   }, []);
   return (
     <div className="grid grid-rows-[1fr_2fr_1fr] grid-cols-1 h-full">
@@ -64,9 +69,9 @@ function App() {
           <Input placeholder="Enter Your Name" onChange={handleNameChange} />
         </div>
         <div className="flex flex-row gap-8">
-          <Button className="font-black" onClick={handleCreateRoomClick} size="lg" disabled={!Boolean(name)}>Create Room</Button>
-          <Button className="font-black" onClick={handleJoinRoomClick} size="lg" disabled={!Boolean(name)}>Join Room</Button>
-          <Button className="font-black" onClick={handleGameRoomClick} size="lg" disabled={!Boolean(name)}>Game Room</Button>
+          <Button className="font-black" onClick={handleCreateRoomClick} size="lg" disabled={!Boolean(playerName)}>Create Room</Button>
+          <Button className="font-black" onClick={handleJoinRoomClick} size="lg" disabled={!Boolean(playerName)}>Join Room</Button>
+          <Button className="font-black" onClick={handleGameRoomClick} size="lg" disabled={!Boolean(playerName)}>Game Room</Button>
         </div>
       </main>
 

@@ -12,3 +12,11 @@ export class RoomModel {
     this.players = raw.players;
   }
 }
+export class PlayerModel {
+  public id: string;
+  public name: string;
+  constructor(raw: IPlayer) {
+    this.id = raw.id;
+    this.name = raw.name;
+  }
+}

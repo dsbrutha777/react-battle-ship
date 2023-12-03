@@ -222,14 +222,12 @@ function GameRoom() {
   const handleBlockerCancelClick = useCallback((blocker: any) => {
     blocker.reset();
   }, []);
-  const handleBlockerContinueClick = useCallback(async (blocker: any) => {
+  const handleBlockerContinueClick = useCallback(async () => {
     leaveFlgRef.current = true;
 
     const { roomId } = params;
     const roomsRef = ref(db, `rooms/${roomId}`);
     await remove(roomsRef);
-
-    blocker.proceed();
   }, []);
 
   useEffect(() => {
@@ -309,7 +307,7 @@ function GameRoom() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => handleBlockerCancelClick(blocker)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleBlockerContinueClick(blocker)}>Continue</AlertDialogAction>
+            <AlertDialogAction onClick={handleBlockerContinueClick}>Continue</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

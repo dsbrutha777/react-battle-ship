@@ -7,7 +7,6 @@ import { firebaseConfig } from "@/firebase-config";
 import { useToast } from "@/components/ui/use-toast"
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RoomStatus } from '@/enums';
-import { v4 as uuidv4 } from 'uuid';
 import { PlayerModel } from '@/models';
 
 
@@ -58,7 +57,6 @@ function JoinRoom() {
   };
 
   const handleJoinRoomClick = useCallback(async () => {
-    // const playerName = searchParams.get('playerName') || '';
     const playerId = sessionStorage.getItem('playerId') || '';
 
     const db = getDatabase(app);

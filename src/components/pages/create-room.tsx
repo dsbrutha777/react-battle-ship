@@ -30,14 +30,16 @@ function CreateRoom() {
   useEffect(() => {
     const roomsRef = ref(db, `rooms/${params.roomId}`);
     return onValue(roomsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data.status === RoomStatus.PLAYING) {
-        const now = new Date();
-        toast({
-          title: "Let's start the game!",
-          description: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
-        });
-        navigate(`/game-room/${params.roomId}`);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        if (data.status === RoomStatus.READY) {
+          const now = new Date();
+          toast({
+            title: "Let's start the game!",
+            description: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
+          });
+          navigate(`/game-room/${params.roomId}`);
+        }
       }
     });
   }, [params]);

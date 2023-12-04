@@ -11,7 +11,7 @@ import { firebaseConfig } from "@/firebase-config";
 
 import { IPlayer } from "@/interfaces";
 import { RoomModel, PlayerModel } from "@/models"
-import { RoomStatus } from "@/enums";
+import { RoomStatus, PlayerStatus } from "@/enums";
 import { v4 as uuidv4 } from 'uuid';
 import { genRamdomRoomId } from "@/utility/utils";
 
@@ -24,7 +24,7 @@ function App() {
     const db = getDatabase(app);
     const id = uuidv4();
     const playersRef = ref(db, `players/${id}`);
-    const param = { id, name }
+    const param = { id, name, status: PlayerStatus.PREPARE}
     const newPlayer = new PlayerModel(param)
     await set(playersRef, newPlayer);
 
@@ -45,7 +45,7 @@ function App() {
     
     const param = {
       id: roomId,
-      players: [roomOwner],
+      players: [roomOwner.id],
       status: RoomStatus.WAIT
     };
     const newRoom = new RoomModel(param);

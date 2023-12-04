@@ -9,6 +9,12 @@ export enum Direction {
   VERTICAL = "VERTICAL"
 }
 export enum RoomStatus {
-  "WAIT" = "WAIT",
-  "PLAYING" = "PLAYING"
+  "WAIT" = "WAIT", // 房間剛建立等待對手玩家加入
+  "READY" = "READY", // 房間已有兩位玩家，等待玩家準備
+  "PLAYING" = "PLAYING" // 戰鬥中
+}
+export enum PlayerStatus {
+  "PREPARE" = "PREPARE", // 玩家準備中(選擇船艦)
+  "READY" = "READY", // 玩家準備完成，等待對手準備
+  "PLAYING" = "PLAYING" // 玩家戰鬥中
 }

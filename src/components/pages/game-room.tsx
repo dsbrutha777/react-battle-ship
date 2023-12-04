@@ -3,12 +3,12 @@ import { GRID_SIZE } from "@/utility/constants";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast"
-import { ShipSize, Direction } from '@/enums'
+import { ShipSize, Direction, PlayerStatus } from '@/enums'
 import { PlayerModel } from '@/models'
 import { useBlocker, useParams, useNavigate } from 'react-router-dom'
 
 import { initializeApp } from "firebase/app";
-import { ref, get, remove, onValue, getDatabase } from "firebase/database";
+import { ref, get, remove, onValue, getDatabase, set } from "firebase/database";
 import { firebaseConfig } from "@/firebase-config";
 
 import {
@@ -25,6 +25,7 @@ import {
 const app = initializeApp(firebaseConfig);
 
 function GameRoom() {
+  const [isReady, setIsReady] = useState(false);
   const [player, setPlayer] = useState<PlayerModel>();
   const [oppenont, setOppenont] = useState<PlayerModel>();
   const leaveFlgRef = useRef(false);
@@ -207,40 +208,6 @@ function GameRoom() {
       [shipSize]: false,
     }));
   }, [shipSize]);
-  const handleConfirm = useCallback(() => {
-    // TODO: set client state to server
-    const now = new Date();
-    toast({
-      title: "Let's start the game!",
-      description: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
-    })
-  }, []);
-
-  useEffect(() => {
-    const playerId = sessionStorage.getItem('playerId') || '';
-    const playerRef = ref(db, `players/${playerId}`);
-    return onValue(playerRef, (snapshot) => {
-      const data = snapshot.val();
-      setPlayer(new PlayerModel(data));
-
-      const roomsRef = ref(db, `rooms/${params.roomId}`);
-      return onValue(roomsRef, (snapshot) => {
-        const data = snapshot.val();
-        const oppenontId = data.players.find((player: PlayerModel) => player.id !== playerId)?.id;
-        const oppenontRef = ref(db, `players/${oppenontId}`);
-        return onValue(oppenontRef, (snapshot) => {
-          const data = snapshot.val();
-          setOppenont(new PlayerModel(data));
-        });
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      setIsAlertDialogOpen(true);
-    }
-  }, [blocker]);
 
   const handleBlockerCancelClick = useCallback((blocker: any) => {
     blocker.reset();
@@ -262,6 +229,67 @@ function GameRoom() {
     await remove(roomsRef);
   }, []);
 
+  const updatePlayerStatus = useCallback((playerId: string, status: PlayerStatus) => {
+    const playerRef = ref(db, `players/${playerId}`);
+    get(playerRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const newPlayer = new PlayerModel(data);
+        set(playerRef, { ...newPlayer, status });
+      }
+    });
+  }, []);
+
+  const handleReady = useCallback(() => {
+    const playerId = player?.id || '';
+    updatePlayerStatus(playerId, PlayerStatus.READY);
+
+    setIsReady(true);
+  }, [cells, player]);
+  const handleCancelReady = useCallback(() => {
+    const playerId = player?.id || '';
+    updatePlayerStatus(playerId, PlayerStatus.PREPARE);
+
+    setIsReady(false);
+  }, [player]);
+
+  // ========== useEffect ========== //
+
+  // get player info
+  useEffect(() => {
+    const playerId = sessionStorage.getItem('playerId') || '';
+    const playerRef = ref(db, `players/${playerId}`);
+    return onValue(playerRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setPlayer(new PlayerModel(data));
+
+        const roomsRef = ref(db, `rooms/${params.roomId}`);
+        return onValue(roomsRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const oppenontId = data.players.find((_playerId: string) => _playerId !== playerId);
+            const oppenontRef = ref(db, `players/${oppenontId}`);
+            return onValue(oppenontRef, (snapshot) => {
+              if (snapshot.exists()) {
+                const data = snapshot.val();
+                setOppenont(new PlayerModel(data));
+              }
+            });
+          }
+        });
+      }
+    });
+  }, []);
+
+  // confirm leave room
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setIsAlertDialogOpen(true);
+    }
+  }, [blocker]);
+
+  // check room exist
   useEffect(() => {
     const roomsRef = ref(db, `rooms/${params.roomId}`);
     return onValue(roomsRef, (snapshot) => {
@@ -279,6 +307,46 @@ function GameRoom() {
     });
   }, []);
 
+  // players all ready 
+  useEffect(() => {
+    const playerRef = ref(db, `players/${player?.id}`);
+    const oppenontRef = ref(db, `players/${oppenont?.id}`);
+
+    const checkBothReady = (player: PlayerModel, oppenont: PlayerModel) => {
+      if (player?.status === PlayerStatus.READY && oppenont?.status === PlayerStatus.READY) {
+        const now = new Date();
+        toast({
+          title: "all Ready!!!!!",
+          description: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
+        });
+      }
+    }
+
+    const unsubscribePlayerStatus = onValue(playerRef, async (snapshot) => {
+      if (snapshot.exists()) {
+        const playerData = snapshot.val();
+        const oppenontSnapshot = await get(oppenontRef);
+        const oppenontData = oppenontSnapshot.val();
+
+        checkBothReady(playerData, oppenontData)
+      }
+    });
+    const unsubscribeOppenontStatus = onValue(oppenontRef, async (snapshot) => {
+      if (snapshot.exists()) {
+        const oppenontData = snapshot.val();
+        const player = await get(playerRef);
+        const playerData = player.val();
+
+        checkBothReady(playerData, oppenontData)
+      }
+    });
+
+    return () => {
+      unsubscribePlayerStatus();
+      unsubscribeOppenontStatus();
+    }
+  }, []);
+
   return (
     <>
       <div className="flex flex-col justify-center items-center gap-4">
@@ -287,6 +355,7 @@ function GameRoom() {
             <span className="text-2xl text-slate-300">vs</span>
             <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">{oppenont?.name}</span>
         </div>
+        <Button disabled={!isPlacedShip[shipSize] || isReady} onClick={handleShipPlacedRevert} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Revert</Button>
         <div className="flex flex-col gap-4">
           <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
             {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} onClick={() => setShipSize(type.value)}>{type.label}</ToggleGroupItem>)}
@@ -325,12 +394,14 @@ function GameRoom() {
             </div>
           </div>
         </div>
-        <Button disabled={!isPlacedShip[shipSize]} onClick={handleShipPlacedRevert} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Revert</Button>
         {
           isAllShipPlaced && 
           <div className="flex flex-col gap-4">
-            <h1 className="text-5xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500 mt-10">I am Ready.</h1>
-            <Button className="bg-gradient-to-r from-sky-500 to-blue-500 font-black" onClick={handleConfirm}>Confirm</Button>
+            {
+              !isReady ?
+              <Button className="bg-gradient-to-r from-sky-500 to-blue-500 font-black" onClick={handleReady}>Ready</Button> :
+              <Button className="bg-gradient-to-r from-sky-500 to-blue-500 font-black" onClick={handleCancelReady}>Cancel</Button>
+            }
           </div>
         }
       </div>

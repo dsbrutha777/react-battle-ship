@@ -26,7 +26,7 @@ function JoinRoom() {
   };
 
 // 新增函數處理房間加入邏輯
-  const handleRoomJoining = async (roomId: string, newPlayer: PlayerModel) => {
+  const handleRoomJoining = async (roomId: string, newPlayerId: string) => {
     const roomsRef = ref(db, `rooms/${roomId}`);
     const snapshot = await get(roomsRef);
 
@@ -39,13 +39,12 @@ function JoinRoom() {
     }
 
     const existingPlayers = snapshot.val().players;
-    // const newPlayer = new PlayerModel({ id: uuidv4(), name: playerName || '' });
 
     // 更新 Firebase 中的房間信息
     set(roomsRef, {
       ...snapshot.val(),
-      players: [...existingPlayers, newPlayer],
-      status: RoomStatus.PLAYING
+      players: [...existingPlayers, newPlayerId],
+      status: RoomStatus.READY
     });
 
     // 顯示成功信息並導航到遊戲房間
@@ -58,13 +57,8 @@ function JoinRoom() {
 
   const handleJoinRoomClick = useCallback(async () => {
     const playerId = sessionStorage.getItem('playerId') || '';
-
-    const db = getDatabase(app);
-    const playerRef = ref(db, `players/${playerId}`);
-    const snapshot = await get(playerRef);
-    const player = new PlayerModel(snapshot.val());
     
-    handleRoomJoining(roomId, player).catch(error => {
+    handleRoomJoining(roomId, playerId).catch(error => {
       console.error('Error joining room:', error);
     });
   }, [roomId, searchParams]);

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast"
 import { ShipSize, Direction, PlayerStatus } from '@/enums'
 import { PlayerModel } from '@/models'
+import { getFromCharCode } from '@/utility/utils'
 import { useBlocker, useParams, useNavigate } from 'react-router-dom'
 
 import { initializeApp } from "firebase/app";
@@ -80,7 +81,7 @@ function GameRoom() {
   const isAllShipPlaced = useMemo(() => Object.values(isPlacedShip).every(value => value), [isPlacedShip]);
   
   const getASCII = useCallback((index: number) => 65 + index, []);
-  const getYCoordinate = useMemo(() => (index: number) => String.fromCharCode(getASCII(index)), []);
+  // const getYCoordinate = useMemo(() => (index: number) => String.fromCharCode(getASCII(index)), []);
 
   const useIsOverRowEnd = useCallback((cellIndex: number) => {
     const rowEndIndex = Math.floor(cellIndex / GRID_SIZE) * GRID_SIZE + GRID_SIZE - 1;
@@ -103,29 +104,44 @@ function GameRoom() {
     return false;
   }, [shipSize, nextCellCount]);
 
-  const getCoordinates = (cellIndex: number) => {
-    const xCoordinate = cellIndex % GRID_SIZE;
+  const getCoordinates = useCallback((cellIndex: number) => {
+    const xCoordinate = (cellIndex % GRID_SIZE).toString();
     const yCoordinate = String.fromCharCode(getASCII(Math.floor(cellIndex / GRID_SIZE)));
     return [xCoordinate, yCoordinate];
-  };
+  }, []);
 
-  const handleCellClick = useCallback((cellIndex: number) => {
+  const handleCellClick = useCallback(async (index: number) => {
     if (isPlacedShip[shipSize]) {
       return;
     }
 
-    const isOverGridEnd = useIsOverGridEnd(cellIndex);
-    const isConflictWithOtherShip = useIsConflictWithOtherShip(cellIndex);
+    const isOverGridEnd = useIsOverGridEnd(index);
+    const isConflictWithOtherShip = useIsConflictWithOtherShip(index);
     const isDisabled = isOverGridEnd || isConflictWithOtherShip;
     if (isDisabled) {
       return;
     }
 
-    const [xCoordinate, yCoordinate] = getCoordinates(cellIndex);
-    console.log(`放置 ${shipTypes.find(type => type.value === shipSize)?.label}, `, `座標 { x: ${xCoordinate}, y: ${yCoordinate} }`);
+    const playerRef = ref(db, `players/${player?.id}`);
+    const playerSnapshot = await get(playerRef);
+    if (!playerSnapshot.exists()) {
+      return;
+    }
+    const playerData = playerSnapshot.val();
 
     for (let i = 0; i < shipSize; i++) {
-      const cellElement = document.querySelector(`[data-key="cell-${cellIndex + nextCellCount * i}"]`);
+      const cellIndex = index + nextCellCount * i
+      const cellElement = document.querySelector(`[data-key="cell-${cellIndex}"]`);
+      const [xCoordinate, yCoordinate] = getCoordinates(cellIndex);
+      console.log(`放置 ${shipTypes.find(type => type.value === shipSize)?.label}, `, `座標 { x: ${xCoordinate}, y: ${yCoordinate} }`);
+
+      // update ship position
+      playerData.cells[cellIndex] = {
+        ...playerData.cells[cellIndex],
+        value: shipSize,
+      }
+      set(playerRef, playerData);
+
       if (cellElement) {
         cellElement.classList.remove('bg-sky-500');
         cellElement.classList.add('bg-green-500', 'font-black');
@@ -142,7 +158,7 @@ function GameRoom() {
     nextShip();
     
 
-  }, [shipSize, nextCellCount, useIsOverGridEnd, isPlacedShip]);
+  }, [player, shipSize, nextCellCount, useIsOverGridEnd, isPlacedShip]);
   const nextShip = useCallback(() => {
     const values = Object.values(isPlacedShip); // [false, false, false, false]
     const keys = Object.keys(isPlacedShip); // ['2', '3', '4', '5']
@@ -307,46 +323,6 @@ function GameRoom() {
     });
   }, []);
 
-  // players all ready 
-  useEffect(() => {
-    const playerRef = ref(db, `players/${player?.id}`);
-    const oppenontRef = ref(db, `players/${oppenont?.id}`);
-
-    const checkBothReady = (player: PlayerModel, oppenont: PlayerModel) => {
-      if (player?.status === PlayerStatus.READY && oppenont?.status === PlayerStatus.READY) {
-        const now = new Date();
-        toast({
-          title: "all Ready!!!!!",
-          description: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
-        });
-      }
-    }
-
-    const unsubscribePlayerStatus = onValue(playerRef, async (snapshot) => {
-      if (snapshot.exists()) {
-        const playerData = snapshot.val();
-        const oppenontSnapshot = await get(oppenontRef);
-        const oppenontData = oppenontSnapshot.val();
-
-        checkBothReady(playerData, oppenontData)
-      }
-    });
-    const unsubscribeOppenontStatus = onValue(oppenontRef, async (snapshot) => {
-      if (snapshot.exists()) {
-        const oppenontData = snapshot.val();
-        const player = await get(playerRef);
-        const playerData = player.val();
-
-        checkBothReady(playerData, oppenontData)
-      }
-    });
-
-    return () => {
-      unsubscribePlayerStatus();
-      unsubscribeOppenontStatus();
-    }
-  }, []);
-
   return (
     <>
       <div className="flex flex-col justify-center items-center gap-4">
@@ -372,7 +348,7 @@ function GameRoom() {
           </div>
           <div className="grid-in-yaxis">
             <div className="grid grid-rows-10 place-items-center h-[500px]">
-              {yAxis.map((_, index) => (<div key={`yaxis-${getYCoordinate(index)}`}>{getYCoordinate(index)}</div>))}
+              {yAxis.map((_, index) => (<div key={`yaxis-${getFromCharCode(index)}`}>{getFromCharCode(index)}</div>))}
             </div>
           </div>
           <div className="grid-in-board">

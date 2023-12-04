@@ -9,11 +9,13 @@ import { initializeApp } from "firebase/app";
 import { getDatabase, ref, get, set } from "firebase/database";
 import { firebaseConfig } from "@/firebase-config";
 
-import { IPlayer } from "@/interfaces";
+import { IPlayer, ICell } from "@/interfaces";
 import { RoomModel, PlayerModel } from "@/models"
 import { RoomStatus, PlayerStatus } from "@/enums";
 import { v4 as uuidv4 } from 'uuid';
-import { genRamdomRoomId } from "@/utility/utils";
+import { genRamdomRoomId, getFromCharCode } from "@/utility/utils";
+import { GRID_SIZE } from "@/utility/constants";
+
 
 const app = initializeApp(firebaseConfig);
 
@@ -24,13 +26,32 @@ function App() {
     const db = getDatabase(app);
     const id = uuidv4();
     const playersRef = ref(db, `players/${id}`);
-    const param = { id, name, status: PlayerStatus.PREPARE}
+    const cells = createCells();
+    const param = { id, name, status: PlayerStatus.PREPARE, cells }
     const newPlayer = new PlayerModel(param)
     await set(playersRef, newPlayer);
 
     sessionStorage.setItem('playerId', newPlayer.id);
 
     return newPlayer;
+  }, []);
+
+  const createCells = useCallback(() => {
+    const cells: ICell[] = [];
+
+    for (let i = 0; i < GRID_SIZE; i++) {
+      for (let j = 0; j < GRID_SIZE; j++) {
+        cells.push({
+          x: j.toString(), // 0 - 9
+          y: getFromCharCode(i), // A - J
+          value: '0',
+          isHit: false
+        })
+      }
+    }
+
+    return cells;
+
   }, []);
   const createRoom = useCallback(async (roomOwner: IPlayer) => {
     const db = getDatabase(app);
@@ -46,7 +67,8 @@ function App() {
     const param = {
       id: roomId,
       players: [roomOwner.id],
-      status: RoomStatus.WAIT
+      status: RoomStatus.WAIT,
+      round: ''
     };
     const newRoom = new RoomModel(param);
     await set(roomsRef, newRoom);

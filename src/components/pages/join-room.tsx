@@ -7,7 +7,6 @@ import { firebaseConfig } from "@/firebase-config";
 import { useToast } from "@/components/ui/use-toast"
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RoomStatus } from '@/enums';
-import { PlayerModel } from '@/models';
 
 
 const app = initializeApp(firebaseConfig);

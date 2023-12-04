@@ -3,10 +3,11 @@ import { GRID_SIZE } from "@/utility/constants";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast"
-import { ShipSize, Direction, PlayerStatus } from '@/enums'
+import { ShipSize, Direction, PlayerStatus, RoomStatus } from '@/enums'
 import { PlayerModel } from '@/models'
 import { getFromCharCode } from '@/utility/utils'
 import { useBlocker, useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { initializeApp } from "firebase/app";
 import { ref, get, remove, onValue, getDatabase, set } from "firebase/database";
@@ -26,6 +27,7 @@ import {
 const app = initializeApp(firebaseConfig);
 
 function GameRoom() {
+  const [round, setRound] = useState('');
   const [isReady, setIsReady] = useState(false);
   const [player, setPlayer] = useState<PlayerModel>();
   const [oppenont, setOppenont] = useState<PlayerModel>();
@@ -269,6 +271,12 @@ function GameRoom() {
     setIsReady(false);
   }, [player]);
 
+  const handleRoundChange = useCallback(() => {
+    const roomsRoundRef = ref(db, `rooms/${params.roomId}/round`);
+    const nextRound = round === player?.id ? oppenont?.id : player?.id;
+    set(roomsRoundRef, nextRound);
+  }, [round, player, oppenont]);
+
   // ========== useEffect ========== //
 
   // get player info
@@ -323,15 +331,72 @@ function GameRoom() {
     });
   }, []);
 
+  // both player ready
+  useEffect(() => {
+    const playerStatusRef = ref(db, `players/${player?.id}/status`);
+    const oppenontStatusRef = ref(db, `players/${oppenont?.id}/status`);
+
+    let playerStatus = '';
+    let oppenontStatus = '';
+
+    const playerStatusListener = onValue(playerStatusRef, (snapshot) => {  
+      if (snapshot.exists()) {
+        playerStatus = snapshot.val();
+      }
+    });
+    const oppenontStatusListener = onValue(oppenontStatusRef, (snapshot) => {
+      if (snapshot.exists()) {
+        oppenontStatus = snapshot.val();
+      }
+    });
+
+    return () => {
+      playerStatusListener();
+      oppenontStatusListener();
+
+      if (playerStatus === PlayerStatus.READY && oppenontStatus === PlayerStatus.READY) {
+        const roomsStatusRef = ref(db, `rooms/${params.roomId}/status`);
+        const playerStatusRef = ref(db, `players/${player?.id}/status`);
+        const oppenontStatusRef = ref(db, `players/${oppenont?.id}/status`);
+
+        set(roomsStatusRef, RoomStatus.PLAYING);
+        set(playerStatusRef, PlayerStatus.PLAYING);
+        set(oppenontStatusRef, PlayerStatus.PLAYING);
+
+        const roomsRoundRef = ref(db, `rooms/${params.roomId}/round`);
+        set(roomsRoundRef, Math.random() > 0.5 ? player?.id : oppenont?.id);
+
+        toast({
+          title: "Game Start!",
+          description: "Let's fight!",
+        });
+      }
+    }
+  }, [player, oppenont]);
+
+  // get room round
+  useEffect(() => {
+    const roomsRoundRef = ref(db, `rooms/${params.roomId}/round`);
+    return onValue(roomsRoundRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setRound(data);
+      }
+    });
+  }, []);
+
   return (
     <>
       <div className="flex flex-col justify-center items-center gap-4">
         <div className="flex flex-row justify-between items-end gap-16">
             <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500">{player?.name}</span>
-            <span className="text-2xl text-slate-300">vs</span>
+            <span className="text-2xl text-slate-300">{round === player?.id ? <ArrowLeft /> : <ArrowRight />}</span>
             <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">{oppenont?.name}</span>
         </div>
-        <Button disabled={!isPlacedShip[shipSize] || isReady} onClick={handleShipPlacedRevert} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Revert</Button>
+        <div className="flex flex-row gap-1">
+          <Button disabled={!isPlacedShip[shipSize] || isReady} onClick={handleShipPlacedRevert} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Revert</Button>
+          <Button onClick={handleRoundChange} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Change</Button>
+        </div>
         <div className="flex flex-col gap-4">
           <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
             {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} onClick={() => setShipSize(type.value)}>{type.label}</ToggleGroupItem>)}

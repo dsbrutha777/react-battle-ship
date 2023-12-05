@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2023-12-01T02:22:33.606Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0" etag="jwxGm85SS2VS0biI2P8g" version="22.1.5" type="device">
+<mxfile host="app.diagrams.net" modified="2023-12-05T02:06:40.157Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0" etag="yAQUhneGiobwqpdvE1yS" version="22.1.5" type="device">
   <diagram id="dDf30LXxpHUZ1cEw3kPy" name="Page-1">
-    <mxGraphModel dx="1386" dy="751" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1980" dy="1073" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -104,7 +104,7 @@
         <mxCell id="HJoSXtMTw_eG9oTYeWME-44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="HJoSXtMTw_eG9oTYeWME-40" target="HJoSXtMTw_eG9oTYeWME-43" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="HJoSXtMTw_eG9oTYeWME-40" value="擲硬幣決定誰先攻" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+        <mxCell id="HJoSXtMTw_eG9oTYeWME-40" value="隨機決定誰先" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="350" y="800" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="HJoSXtMTw_eG9oTYeWME-49" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="HJoSXtMTw_eG9oTYeWME-43" target="HJoSXtMTw_eG9oTYeWME-47" edge="1">
@@ -158,6 +158,18 @@
         </mxCell>
         <mxCell id="HJoSXtMTw_eG9oTYeWME-68" value="遊戲結束" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="560" y="1200" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="oIzwIf-0xC4NpwgYxfzR-1" value="/create-room" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="50" y="300" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oIzwIf-0xC4NpwgYxfzR-2" value="/join-room" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="550" y="295" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oIzwIf-0xC4NpwgYxfzR-3" value="/game-room" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="490" y="525" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="oIzwIf-0xC4NpwgYxfzR-5" value="player.status === READY" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="550" y="715" width="200" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

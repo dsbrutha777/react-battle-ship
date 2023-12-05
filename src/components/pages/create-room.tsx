@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback , useMemo } from "react";
 import { useBlocker, useParams, useNavigate } from "react-router-dom";
 import { initializeApp } from "firebase/app";
-import { ref, remove, onValue, getDatabase } from "firebase/database";
+import { ref, get, remove, onValue, getDatabase } from "firebase/database";
 import { firebaseConfig } from "@/firebase-config";
 import { RoomStatus } from "@/enums";
 import { useToast } from '@/components/ui/use-toast'
@@ -56,6 +56,17 @@ function CreateRoom() {
   const handleBlockerContinueClick = useCallback(async (blocker: any) => {
     const { roomId } = params;
     const roomsRef = ref(db, `rooms/${roomId}`);
+    const roomPlayersRef = ref(db, `rooms/${roomId}/players`);
+
+    get(roomPlayersRef).then(async (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        data.forEach(async (playerId: string) => {
+          await remove(ref(db, `players/${playerId}`));
+        });
+      }
+    });
+    
     await remove(roomsRef);
 
     blocker.proceed();

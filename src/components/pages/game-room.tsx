@@ -30,7 +30,7 @@ function GameRoom() {
   const [round, setRound] = useState('');
   const [isReady, setIsReady] = useState(false);
   const [player, setPlayer] = useState<PlayerModel>();
-  const [oppenont, setOppenont] = useState<PlayerModel>();
+  const [opponent, setOpponent] = useState<PlayerModel>();
   const leaveFlgRef = useRef(false);
   const db = useMemo(() => getDatabase(app), []);
   const navigate = useNavigate();
@@ -212,12 +212,24 @@ function GameRoom() {
   }, [updateCellClass, isPlacedShip]);
 
   const handleShipPlacedRevert = useCallback(() => {
-    // 找尋innerHTML為shipSize的cell
+    // 找尋 innerHTML 為 shipSize 的 cell
     const cells = document.querySelectorAll(`[data-key^="cell-"]`);
-    cells.forEach((cell) => {
+    cells.forEach((cell, index) => {
       if (cell.innerHTML === shipSize.toString()) {
         cell.classList.remove('bg-green-500', 'font-black');
-        cell.innerHTML = '*';
+        cell.innerHTML = '0';
+
+        const playerCellsRef = ref(db, `players/${player?.id}/cells`);
+        get(playerCellsRef).then((snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            data[index] = {
+              ...data[index],
+              value: 0,
+            }
+            set(playerCellsRef, data);
+          }
+        });
       }
     });
 
@@ -235,12 +247,11 @@ function GameRoom() {
 
     const { roomId } = params;
     const roomsRef = ref(db, `rooms/${roomId}`);
-    
     const snapshot = await get(roomsRef);
     const players = snapshot.val().players;
 
-    players.forEach(async (player: PlayerModel) => {
-      const playerRef = ref(db, `players/${player.id}`);
+    players.forEach(async (playerId: PlayerModel) => {
+      const playerRef = ref(db, `players/${playerId}`);
       await remove(playerRef);
     });
 
@@ -248,56 +259,82 @@ function GameRoom() {
   }, []);
 
   const updatePlayerStatus = useCallback((playerId: string, status: PlayerStatus) => {
+    const playerStatusRef = ref(db, `players/${playerId}/status`);
+    set(playerStatusRef, status);
+  }, []);
+
+  const handleReady = useCallback(async () => {
+    const playerId = player?.id || '';
+    updatePlayerStatus(playerId, PlayerStatus.READY);
+    
+    const opponentStatusRef = ref(db, `players/${opponent?.id}/status`);
+    const opponentStatusSnapshot = await get(opponentStatusRef);
+    const opponentStatus = opponentStatusSnapshot.val();
+    if (opponentStatus === PlayerStatus.READY) {
+      const roomsStatusRef = ref(db, `rooms/${params.roomId}/status`);
+      const playerStatusRef = ref(db, `players/${player?.id}/status`);
+      const opponentStatusRef = ref(db, `players/${opponent?.id}/status`);
+
+      Promise.all([
+        set(roomsStatusRef, RoomStatus.PLAYING),
+        set(playerStatusRef, PlayerStatus.PLAYING),
+        set(opponentStatusRef, PlayerStatus.PLAYING)
+      ]);
+
+      
+    }
+
+    setIsReady(true);
+  }, [cells, player, opponent]);
+  const handleCancelReady = useCallback(async () => {
+    const playerId = player?.id || '';
+    updatePlayerStatus(playerId, PlayerStatus.PREPARE);
+
+    const roomsStatusRef = ref(db, `rooms/${params.roomId}/status`);
+    const opponentStatusRef = ref(db, `players/${opponent?.id}/status`);
+    
+    set(roomsStatusRef, RoomStatus.WAIT)
+
+    const opponentStatusSnapshot = await get(opponentStatusRef);
+    if (opponentStatusSnapshot.exists()) {
+      const opponentStatus = opponentStatusSnapshot.val();
+      if (opponentStatus === PlayerStatus.PLAYING) {
+        updatePlayerStatus(opponent?.id || '', PlayerStatus.READY);
+      }
+    }
+
+    setIsReady(false);
+  }, [player, opponent]);
+
+  // ========== useEffect ========== //
+
+  // listen player info
+  useEffect(() => {
+    const playerId = sessionStorage.getItem('playerId') || '';
     const playerRef = ref(db, `players/${playerId}`);
     get(playerRef).then((snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        const newPlayer = new PlayerModel(data);
-        set(playerRef, { ...newPlayer, status });
-      }
-    });
-  }, []);
-
-  const handleReady = useCallback(() => {
-    const playerId = player?.id || '';
-    updatePlayerStatus(playerId, PlayerStatus.READY);
-
-    setIsReady(true);
-  }, [cells, player]);
-  const handleCancelReady = useCallback(() => {
-    const playerId = player?.id || '';
-    updatePlayerStatus(playerId, PlayerStatus.PREPARE);
-
-    setIsReady(false);
-  }, [player]);
-
-  const handleRoundChange = useCallback(() => {
-    const roomsRoundRef = ref(db, `rooms/${params.roomId}/round`);
-    const nextRound = round === player?.id ? oppenont?.id : player?.id;
-    set(roomsRoundRef, nextRound);
-  }, [round, player, oppenont]);
-
-  // ========== useEffect ========== //
-
-  // get player info
-  useEffect(() => {
-    const playerId = sessionStorage.getItem('playerId') || '';
-    const playerRef = ref(db, `players/${playerId}`);
-    return onValue(playerRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
         setPlayer(new PlayerModel(data));
 
+        data.cells.forEach((cell: any, index: number) => {
+          const cellElement = document.querySelector(`[data-key="cell-${index}"]`);
+          if (cellElement && cell.value.toString() !== '0') {
+            cellElement.innerHTML = cell.value;
+            cellElement.classList.add('bg-green-500', 'font-black');
+          }
+        });
+
         const roomsRef = ref(db, `rooms/${params.roomId}`);
-        return onValue(roomsRef, (snapshot) => {
+        get(roomsRef).then((snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
             const oppenontId = data.players.find((_playerId: string) => _playerId !== playerId);
             const oppenontRef = ref(db, `players/${oppenontId}`);
-            return onValue(oppenontRef, (snapshot) => {
+            get(oppenontRef).then((snapshot) => {
               if (snapshot.exists()) {
                 const data = snapshot.val();
-                setOppenont(new PlayerModel(data));
+                setOpponent(new PlayerModel(data));
               }
             });
           }
@@ -331,48 +368,21 @@ function GameRoom() {
     });
   }, []);
 
-  // both player ready
+  // listen room status
   useEffect(() => {
-    const playerStatusRef = ref(db, `players/${player?.id}/status`);
-    const oppenontStatusRef = ref(db, `players/${oppenont?.id}/status`);
-
-    let playerStatus = '';
-    let oppenontStatus = '';
-
-    const playerStatusListener = onValue(playerStatusRef, (snapshot) => {  
+    const roomsStatusRef = ref(db, `rooms/${params.roomId}/status`);
+    return onValue(roomsStatusRef, (snapshot) => {
       if (snapshot.exists()) {
-        playerStatus = snapshot.val();
+        const data = snapshot.val();
+        if (data === RoomStatus.PLAYING) {
+          toast({
+            title: "Game Start!",
+            description: "Let's go!",
+          });
+        }
       }
     });
-    const oppenontStatusListener = onValue(oppenontStatusRef, (snapshot) => {
-      if (snapshot.exists()) {
-        oppenontStatus = snapshot.val();
-      }
-    });
-
-    return () => {
-      playerStatusListener();
-      oppenontStatusListener();
-
-      if (playerStatus === PlayerStatus.READY && oppenontStatus === PlayerStatus.READY) {
-        const roomsStatusRef = ref(db, `rooms/${params.roomId}/status`);
-        const playerStatusRef = ref(db, `players/${player?.id}/status`);
-        const oppenontStatusRef = ref(db, `players/${oppenont?.id}/status`);
-
-        set(roomsStatusRef, RoomStatus.PLAYING);
-        set(playerStatusRef, PlayerStatus.PLAYING);
-        set(oppenontStatusRef, PlayerStatus.PLAYING);
-
-        const roomsRoundRef = ref(db, `rooms/${params.roomId}/round`);
-        set(roomsRoundRef, Math.random() > 0.5 ? player?.id : oppenont?.id);
-
-        toast({
-          title: "Game Start!",
-          description: "Let's fight!",
-        });
-      }
-    }
-  }, [player, oppenont]);
+  }, []);
 
   // get room round
   useEffect(() => {
@@ -390,12 +400,15 @@ function GameRoom() {
       <div className="flex flex-col justify-center items-center gap-4">
         <div className="flex flex-row justify-between items-end gap-16">
             <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500">{player?.name}</span>
-            <span className="text-2xl text-slate-300">{round === player?.id ? <ArrowLeft /> : <ArrowRight />}</span>
-            <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">{oppenont?.name}</span>
+            {
+              round ?
+              <span className="text-2xl text-slate-300">{round === player?.id ? <ArrowLeft /> : <ArrowRight />}</span> :
+              <span className="text-2xl text-slate-300">vs</span>
+            }
+            <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">{opponent?.name}</span>
         </div>
         <div className="flex flex-row gap-1">
           <Button disabled={!isPlacedShip[shipSize] || isReady} onClick={handleShipPlacedRevert} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Revert</Button>
-          <Button onClick={handleRoundChange} className="bg-gradient-to-r from-sky-500 to-blue-500 font-black">Change</Button>
         </div>
         <div className="flex flex-col gap-4">
           <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>

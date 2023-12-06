@@ -1,17 +1,29 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { initializeApp } from "firebase/app";
-import { ref, set, get, getDatabase } from "firebase/database";
+import { ref, set, get, remove, getDatabase } from "firebase/database";
 import { firebaseConfig } from "@/firebase-config";
 import { useToast } from "@/components/ui/use-toast"
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useBlocker } from 'react-router-dom';
 import { RoomStatus } from '@/enums';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog"
 
 const app = initializeApp(firebaseConfig);
 
 function JoinRoom() {
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname);
   const [searchParams] = useSearchParams();
   const { toast } = useToast()
   const navigate = useNavigate();
@@ -64,11 +76,47 @@ function JoinRoom() {
   const handleRoomChangeChange = useCallback((e: any) => {
     setRoomId(e.target.value);
   }, [roomId]);
+  const handleBlockerCancelClick = useCallback((blocker: any) => {
+    blocker.reset();
+  }, []);
+  const handleBlockerContinueClick = useCallback((blocker: any) => {
+    const playerRef = ref(db, `players/${sessionStorage.getItem('playerId')}`);
+
+    remove(playerRef).then(() => {
+      sessionStorage.removeItem('playerId');
+      blocker.proceed();
+    });
+    
+  }, []);
+  
+  // useEffect
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setIsAlertDialogOpen(true);
+    }
+  }, [blocker]);
+  
   return (
-    <div className="flex flex-col justify-center items-center gap-4">
-      <Input placeholder="Enter Room Number" onChange={handleRoomChangeChange} className="w-1/2" />
-      <Button onClick={handleJoinRoomClick} disabled={!Boolean(roomId)}>Join Room</Button>
-    </div>
+    <>
+      <div className="flex flex-col justify-center items-center gap-4">
+        <Input placeholder="Enter Room Number" onChange={handleRoomChangeChange} className="w-1/2" />
+        <Button onClick={handleJoinRoomClick} disabled={!Boolean(roomId)}>Join Room</Button>
+      </div>
+      <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Back To Index Page</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove your info?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleBlockerCancelClick(blocker)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleBlockerContinueClick(blocker)}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

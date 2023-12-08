@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 
 function JoinRoom() {
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== `/game-room/${roomId}`);
   const [searchParams] = useSearchParams();
   const { toast } = useToast()
   const navigate = useNavigate();
@@ -77,6 +77,7 @@ function JoinRoom() {
     setRoomId(e.target.value);
   }, [roomId]);
   const handleBlockerCancelClick = useCallback((blocker: any) => {
+    setIsAlertDialogOpen(false);
     blocker.reset();
   }, []);
   const handleBlockerContinueClick = useCallback((blocker: any) => {

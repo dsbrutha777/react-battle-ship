@@ -379,10 +379,13 @@ function GameRoom() {
             title: "Game Start!",
             description: "Let's go!",
           });
+
+          const roomsRoundRef = ref(db, `rooms/${params.roomId}/round`);
+          set(roomsRoundRef, player?.id);
         }
       }
     });
-  }, []);
+  }, [player]);
 
   // get room round
   useEffect(() => {

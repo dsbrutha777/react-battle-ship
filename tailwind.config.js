@@ -26,7 +26,7 @@ module.exports = {
         'gameBoard': 'auto 1fr'
       },
       gridTemplateRows: {
-        'gameBoard': 'auto 1fr'
+        'gameBoard': 'auto 1fr',
       },
       colors: {
         border: "hsl(var(--border))",

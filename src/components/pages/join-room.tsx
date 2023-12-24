@@ -1,124 +1,80 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { initializeApp } from "firebase/app";
-import { ref, set, get, remove, getDatabase } from "firebase/database";
-import { firebaseConfig } from "@/firebase-config";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button';
+import { CustomizedAlertDialog } from "../ui/customized-alert-dialog";
+import { useBlocker, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast"
-import { useNavigate, useSearchParams, useBlocker } from 'react-router-dom';
-import { RoomStatus } from '@/enums';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog"
-
-const app = initializeApp(firebaseConfig);
+import FirebaseService from '@/services/firebaseService'
 
 function JoinRoom() {
-  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== `/game-room/${roomId}`);
-  const [searchParams] = useSearchParams();
-  const { toast } = useToast()
-  const navigate = useNavigate();
-  const db = useMemo(() => getDatabase(app), []);
-  const [roomId, setRoomId] = useState('');
+    const [roomId, setRoomId] = useState<string>('');
+    const navigate = useNavigate();
+    const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== `/game-room/${roomId}`);
+    const [isAlertDialogOpen, setIsAlertDialogOpen] = useState<boolean>(false);
+    const { toast } = useToast();
+    const firebaseService = useMemo(() => new FirebaseService(), []);
 
-  // 將時間格式化的邏輯提取為一個函數
-  const formatCurrentDateTime = () => {
-    const now = new Date();
-    return `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-  };
+    // ===== useCallback ===== //
+    const handleRoomIdChange = useCallback((e: any) => {
+        setRoomId(e.target.value);
+    }, []);
+    const handleJoinRoomClick = useCallback(async () => {
+        const playerId = sessionStorage.getItem('playerId') || '';
+        const isJoinRoom = await firebaseService.joinRoom(roomId, playerId);
+        if (isJoinRoom) {
+            navigate(`/game-room/${roomId}`);
+        } else {
+            toast({
+                title: "Room not found!",
+                description: "This Room is not exist.",
+            });
+        }
 
-// 新增函數處理房間加入邏輯
-  const handleRoomJoining = async (roomId: string, newPlayerId: string) => {
-    const roomsRef = ref(db, `rooms/${roomId}`);
-    const snapshot = await get(roomsRef);
+    }, [roomId]);
+    const handleCancelClick = useCallback((blocker: any) => {
+        blocker.reset();
+    }, []);
+    const handleConfirmClick = useCallback((blocker: any) => {
+        const playerId = sessionStorage.getItem("playerId") || '';
+        firebaseService.removePlayer(playerId);
 
-    if (!snapshot.exists()) {
-      toast({
-        title: "Room not found!",
-        description: formatCurrentDateTime(),
-      });
-      return; // 早期返回以減少嵌套
-    }
+        // remove player id from session storage
+        sessionStorage.removeItem("playerId");
 
-    const existingPlayers = snapshot.val().players;
+        blocker.proceed();
+    }, []);
+    // ===== useEffect ===== //
+    useEffect(() => {
+        // blocker.state: 'unblocked' | 'blocked' | 'proceeding'
+        if (blocker.state === 'blocked') {
+            setIsAlertDialogOpen(true);
+        }
 
-    // 更新 Firebase 中的房間信息
-    set(roomsRef, {
-      ...snapshot.val(),
-      players: [...existingPlayers, newPlayerId],
-      status: RoomStatus.READY
-    });
-
-    // 顯示成功信息並導航到遊戲房間
-    toast({
-      title: "Let's start the game!",
-      description: formatCurrentDateTime(),
-    });
-    navigate(`/game-room/${roomId}`);
-  };
-
-  const handleJoinRoomClick = useCallback(async () => {
-    const playerId = sessionStorage.getItem('playerId') || '';
-    
-    handleRoomJoining(roomId, playerId).catch(error => {
-      console.error('Error joining room:', error);
-    });
-  }, [roomId, searchParams]);
-  const handleRoomChangeChange = useCallback((e: any) => {
-    setRoomId(e.target.value);
-  }, [roomId]);
-  const handleBlockerCancelClick = useCallback((blocker: any) => {
-    setIsAlertDialogOpen(false);
-    blocker.reset();
-  }, []);
-  const handleBlockerContinueClick = useCallback((blocker: any) => {
-    const playerRef = ref(db, `players/${sessionStorage.getItem('playerId')}`);
-
-    remove(playerRef).then(() => {
-      sessionStorage.removeItem('playerId');
-      blocker.proceed();
-    });
-    
-  }, []);
-  
-  // useEffect
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      setIsAlertDialogOpen(true);
-    }
-  }, [blocker]);
-  
-  return (
-    <>
-      <div className="flex flex-col justify-center items-center gap-4">
-        <Input placeholder="Enter Room Number" onChange={handleRoomChangeChange} className="w-1/2" />
-        <Button onClick={handleJoinRoomClick} disabled={!Boolean(roomId)}>Join Room</Button>
-      </div>
-      <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Back To Index Page</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove your info?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => handleBlockerCancelClick(blocker)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleBlockerContinueClick(blocker)}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
+        if (blocker.state === 'unblocked') {
+            setIsAlertDialogOpen(false);
+        }
+    }, [blocker]);
+    return (
+        <>
+            <div className="w-full flex flex-col justify-center items-center">
+                <div className="min-w-[400px] flex flex-col justify-center items-center gap-10">
+                    <h1 className="text-5xl">Join Room</h1>
+                    <Input placeholder="Enter Room ID" onChange={handleRoomIdChange} />
+                    <div className="w-full flex flex-row">
+                        <Button className="flex-1" disabled={!roomId} onClick={handleJoinRoomClick}>Join</Button>
+                    </div>
+                </div>
+            </div>
+            <CustomizedAlertDialog
+                isOpen={isAlertDialogOpen}
+                title="Go Back to Home Page?"
+                desc="Are you sure you want to go back to home page?"
+                handleCancelClick={() => handleCancelClick(blocker)}
+                handleConfirmClick={() => handleConfirmClick(blocker)}
+            />
+        </>
+    )
 }
 
-export default JoinRoom;
+export default JoinRoom

@@ -1,116 +1,47 @@
-/// <reference types="vite-plugin-svgr/client" />
-import { useState, useCallback } from 'react'
-import Wave from '@/assets/wave.svg?react'
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button'
-import { Input } from "@/components/ui/input"
-
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, get, set } from "firebase/database";
-import { firebaseConfig } from "@/firebase-config";
-
-import { IPlayer, ICell } from "@/interfaces";
-import { RoomModel, PlayerModel } from "@/models"
-import { RoomStatus, PlayerStatus } from "@/enums";
-import { v4 as uuidv4 } from 'uuid';
-import { genRamdomRoomId, getFromCharCode } from "@/utility/utils";
-import { GRID_SIZE } from "@/utility/constants";
-
-
-const app = initializeApp(firebaseConfig);
+import { useState, useCallback, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import FirebaseService from '@/services/firebaseService'
 
 function App() {
-  const [playerName, setPlayerName] = useState('');
+  const firebaseService = useMemo(()=> new FirebaseService(), []);
   const navigate = useNavigate();
-  const createPlayer = useCallback(async (name: string) => {
-    const db = getDatabase(app);
-    const id = uuidv4();
-    const playersRef = ref(db, `players/${id}`);
-    const cells = createCells();
-    const param = { id, name, status: PlayerStatus.PREPARE, cells }
-    const newPlayer = new PlayerModel(param)
-    await set(playersRef, newPlayer);
 
-    sessionStorage.setItem('playerId', newPlayer.id);
+  // useState
+  const [name, setName] = useState<string>("");
 
-    return newPlayer;
-  }, []);
-
-  const createCells = useCallback(() => {
-    const cells: ICell[] = [];
-
-    for (let i = 0; i < GRID_SIZE; i++) {
-      for (let j = 0; j < GRID_SIZE; j++) {
-        cells.push({
-          x: j.toString(), // 0 - 9
-          y: getFromCharCode(i), // A - J
-          value: '0',
-          isHit: false
-        })
-      }
-    }
-
-    return cells;
-
-  }, []);
-  const createRoom = useCallback(async (roomOwner: IPlayer) => {
-    const db = getDatabase(app);
-    const roomId = genRamdomRoomId();
-    const roomsRef = ref(db, `rooms/${roomId}`);
-
-    const snapshot = await get(roomsRef);
-    if (snapshot.exists()) {
-      createRoom(roomOwner);
-      return;
-    }
-    
-    const param = {
-      id: roomId,
-      players: [roomOwner.id],
-      status: RoomStatus.WAIT,
-      round: ''
-    };
-    const newRoom = new RoomModel(param);
-    await set(roomsRef, newRoom);
-
-    return newRoom;
+  // useCallback
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
   }, []);
   const handleCreateRoomClick = useCallback(async () => {
-    // Create Player
-    const player = await createPlayer(playerName);
-    // Create Room
-    const room = await createRoom(player);
+    // create player
+    const player = await firebaseService.createPlayer(name);
+   
+    // create room
+    const room = await firebaseService.createRoom(player.id)
+    
+    navigate(`/create-room/${room.id}`);
+  }, [name]);
 
-    navigate(`/create-room/${room?.id}`);
-  }, [playerName]);
   const handleJoinRoomClick = useCallback(async () => {
-    // Create Player
-    await createPlayer(playerName);
+    // create player
+    await firebaseService.createPlayer(name);
 
-    navigate(`/join-room`);
-  }, [playerName]);
-  const handleNameChange = useCallback((e: any) => {
-    setPlayerName(e.target.value);
-  }, []);
+    navigate("/join-room");
+  }, [name]);
+
   return (
-    <div className="grid grid-rows-[1fr_2fr_1fr] grid-cols-1 h-full">
-      <header className="flex flex-col justify-center items-center">
-        <h1 className="text-5xl font-black">Battle Ship</h1>
-      </header>
-
-      <main className="flex flex-col justify-center items-center gap-8">
-        <div className="">
-          <Input placeholder="Enter Your Name" onChange={handleNameChange} />
+    <div className="w-full flex flex-col items-center">
+      <div className="min-w-[400px] flex flex-col justify-center items-center gap-10">
+        <h1 className="text-5xl">Battle Ship</h1>
+        <Input placeholder="Enter your name" onChange={handleNameChange} />
+        <div className="w-full flex flex-row gap-5 justify-center">
+          <Button className="flex-1" disabled={!name} onClick={handleCreateRoomClick}>Create Room</Button>
+          <Button className="flex-1" disabled={!name} onClick={handleJoinRoomClick}>Join Room</Button>
         </div>
-        <div className="flex flex-row gap-8">
-          <Button className="font-black" onClick={handleCreateRoomClick} size="lg" disabled={!Boolean(playerName)}>Create Room</Button>
-          <Button className="font-black" onClick={handleJoinRoomClick} size="lg" disabled={!Boolean(playerName)}>Join Room</Button>
-        </div>
-      </main>
-
-      <footer>
-        <Wave />
-      </footer>
+      </div>
     </div>
   )
 }

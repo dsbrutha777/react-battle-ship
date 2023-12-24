@@ -4,10 +4,10 @@ import {
   RouterProvider
 } from 'react-router-dom'
 import App from '@/App'
+import CreateRoom from '@/components/pages/create-room'
+import JoinRoom from '@/components/pages/join-room'
+import GameRoom from '@/components/pages/game-room'
 import NotFound from '@/components/pages/not-found'
-import CreateRoom from './components/pages/create-room'
-import GameRoom from './components/pages/game-room'
-import JoinRoom from './components/pages/join-room'
 import { ThemeProvider } from "@/components/theme-provider"
 import { TopBar } from '@/components/ui/top-bar'
 import { Toaster } from '@/components/ui/toaster'
@@ -20,15 +20,15 @@ const router = createBrowserRouter([
   },
   {
     path: '/create-room/:roomId',
-    element: <TopBar><CreateRoom /></TopBar>,
+    element: <TopBar><CreateRoom></CreateRoom></TopBar>
   },
   {
     path: '/join-room',
-    element: <TopBar><JoinRoom /></TopBar>,
+    element: <TopBar><JoinRoom></JoinRoom></TopBar>
   },
   {
     path: '/game-room/:roomId',
-    element: <TopBar><GameRoom /></TopBar>,
+    element: <TopBar><GameRoom></GameRoom></TopBar>
   },
   {
     path: '*',

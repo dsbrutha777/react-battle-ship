@@ -5,3 +5,9 @@ export const genRamdomRoomId = () => {
 export const getFromCharCode= (index: number) => {
   return String.fromCharCode(65 + index)
 }
+const getASCII = (index: number) => 65 + index;
+export const getCoordinates = (grid_size: number, cellIndex: number) => {
+  const xCoordinate = (cellIndex % grid_size).toString();
+  const yCoordinate = String.fromCharCode(getASCII(Math.floor(cellIndex / grid_size)));
+  return [xCoordinate, yCoordinate];
+};

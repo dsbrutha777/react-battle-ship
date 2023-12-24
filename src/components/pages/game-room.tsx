@@ -12,7 +12,7 @@ import FirebaseService from "@/services/firebaseService";
 function GameRoom() {
     
     const leaveFlgRef = useRef<boolean>(false);
-    const [roomStatus, setRoomStatus] = useState<string>(RoomStatus.READY);
+    const [_, setRoomStatus] = useState<string>(RoomStatus.READY);
     const [player, setPlayer] = useState<IPlayer | null>(null);
     const [opponent, setOpponent] = useState<IPlayer | null>(null);
     const [isAlertDialogOpen, setIsAlertDialogOpen] = useState<boolean>(false);

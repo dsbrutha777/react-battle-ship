@@ -61,7 +61,7 @@ function GameRoom() {
                 if (!leaveFlgRef.current) {
                     toast({
                         title: "The room is not exist.",
-                        description: "Haha! Your oppenont is a coward!",
+                        description: "Haha! Your opponent is a coward!",
                     });
                 }
                 leaveFlgRef.current = false; // reset

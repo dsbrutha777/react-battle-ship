@@ -8,7 +8,7 @@ import { getCoordinates } from '@/utility/utils';
 import { Button } from '@/components/ui/button';
 import FirebaseService from '@/services/firebaseService'
 
-function Grid({ player, opponent, size = GRID_SIZE, mask = false }: { player: IPlayer, opponent: IPlayer, size: number, mask?: boolean}) {
+function Grid({ player, opponent, size = GRID_SIZE }: { player: IPlayer, opponent: IPlayer, size: number }) {
     const firebaseService = useMemo(() => new FirebaseService(), []);
     const xAxis = useMemo(() => Array.from({ length: size }), []); // create 10 rows
     const yAxis = useMemo(() => Array.from({ length: size }), []); // create 10 columns
@@ -49,6 +49,7 @@ function Grid({ player, opponent, size = GRID_SIZE, mask = false }: { player: IP
         [ShipSize.CRUISER]: false,
         [ShipSize.BATTLESHIP]: false,
     });
+    const [isReady, setIsReady] = useState<boolean>(false);
     const isPlacedShipAll = useMemo(() => Object.values(isPlacedShip).every(x => x === true), [isPlacedShip]);
     const nextShip = useCallback(() => {
         setIsPlacedShip(prevState => ({ ...prevState, [shipSize]: true }));
@@ -174,22 +175,24 @@ function Grid({ player, opponent, size = GRID_SIZE, mask = false }: { player: IP
     }, [shipSize]);
     const handlePlayerReady = useCallback(async () => {
         await firebaseService.setPlayerStatus(player?.id || '', PlayerStatus.READY);
+        setIsReady(true);
+    }, []);
+    const handlePlayerUnReady = useCallback(async () => {
+        await firebaseService.setPlayerStatus(player?.id || '', PlayerStatus.PREPARE);
+        setIsReady(false);
     }, []);
 
     return(
         <div className="grid grid-rows-[100px_1fr_auto] gap-y-8">
             <div className="flex flex-col gap-4 h-full w-full justify-center items-center">
-                {mask ?
-                        <div className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-slate-200 to-slate-700">{opponent.status}</div> :
-                        <div className="w-full flex flex-col gap-4">
-                            <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
-                                {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} disabled={isPlacedShip[type.value]}>{type.label}</ToggleGroupItem>)}
-                            </ToggleGroup>
-                            <ToggleGroup variant="outline" size="lg" type="single" value={direction.toString()}>
-                                {directions.map((direction: { label: string, value: Direction }) => <ToggleGroupItem className="grow" key={`${direction.label}-${direction.value}`} value={direction.value.toString()} onClick={() => setDirection(direction.value)}>{direction.label}</ToggleGroupItem>)}
-                            </ToggleGroup>
-                        </div>
-                    }
+                <div className="w-full flex flex-col gap-4">
+                    <ToggleGroup variant="outline" size="lg" type="single" value={shipSize.toString()}>
+                        {shipTypes.map((type: { label: string, value: ShipSize }) => <ToggleGroupItem className="grow" key={`${type.label}-${type.value}`} value={type.value.toString()} disabled={isPlacedShip[type.value]}>{type.label}</ToggleGroupItem>)}
+                    </ToggleGroup>
+                    <ToggleGroup variant="outline" size="lg" type="single" value={direction.toString()}>
+                        {directions.map((direction: { label: string, value: Direction }) => <ToggleGroupItem className="grow" key={`${direction.label}-${direction.value}`} value={direction.value.toString()} onClick={() => setDirection(direction.value)}>{direction.label}</ToggleGroupItem>)}
+                    </ToggleGroup>
+                </div>
             </div>
             <div className="grid grid-areas-gameBoard grid-cols-gameBoard grid-rows-gameBoard gap-4">
                 <div className="grid-in-xaxis">
@@ -203,7 +206,14 @@ function Grid({ player, opponent, size = GRID_SIZE, mask = false }: { player: IP
                     </div>
                 </div>
                 <div className="relative grid-in-board">
-                    {mask && <div className="absolute top-0 left-0 w-full h-[500px] bg-black opacity-50 cursor-not-allowed"></div>}
+                    {
+                        isReady && <>
+                            <div className="absolute w-full h-[501px] opacity-90 cursor-not-allowed bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-700 to-slate-950"></div>
+                            <div className="absolute flex justify-center font-black text-2xl w-[250px] left-[120px] top-[220px] -rotate-12 border-double border-8 border-red-500 text-red-500 p-2">
+                                R E A D Y
+                            </div>
+                        </>
+                    }
                     <div className="grid grid-cols-10 grid-rows-10 border-2 border-solid w-[500px] h-[500px] divide-x divide-y divide-slate-500 border-slate-500 ">
                         {   
                             player?.cells.map((_, index) => (
@@ -221,10 +231,11 @@ function Grid({ player, opponent, size = GRID_SIZE, mask = false }: { player: IP
                     </div>
                 </div>
             </div>
-            {!mask && <div className="flex flex-row justify-center gap-4">
+            <div className="flex flex-row justify-center gap-4">
                 <Button variant="outline" size="lg" disabled={shipSize === ShipSize.SUBWAY} onClick={handleShipSizeRevert}>Revert</Button>
-                <Button variant="outline" size="lg" disabled={!isPlacedShipAll} onClick={handlePlayerReady}>Ready</Button>
-            </div>}
+                {!isReady && <Button variant="outline" size="lg" disabled={!isPlacedShipAll} onClick={handlePlayerReady}>Ready</Button>}
+                {isReady && <Button variant="outline" size="lg" disabled={!isPlacedShipAll} onClick={handlePlayerUnReady}>Unready</Button>}
+            </div>
         </div>
     )
 }

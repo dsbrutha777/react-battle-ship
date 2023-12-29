@@ -110,17 +110,39 @@ function GameRoom() {
             }
         });
     }, [opponent?.status]);
+    useEffect(() => {
+        return onValue(ref(firebaseService.getDb(), `players/${player?.id}/status`), (snapshot) => {
+            if (snapshot.exists()) {
+                console.log(snapshot.val());
+                setPlayer((prev) => {
+                    if (prev) {
+                        return {
+                            ...prev,
+                            status: snapshot.val()
+                        }
+                    }
+                    return prev;
+                });
+            }
+        });
+    }, [player?.status]);
     return (
         <>
             <div className="w-full flex flex-col justify-center items-center gap-10">
                 <div className="flex flex-row items-end justify-center ml-3 gap-10">
-                    <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500">{player?.name}</span>
+                    <div className="flex flex-row gap-4 items-end">
+                        <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-500">{player?.name}</span>
+                        <span className="text-slate-300 font-bold">( {player?.status} )</span>
+                    </div>
                     <span className="text-3xl">vs</span>
-                    <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">{opponent?.name}</span>
+                    <div className="flex flex-row gap-4 items-end">
+                        <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">{opponent?.name}</span>
+                        <span className="text-slate-300 font-bold">( {opponent?.status} )</span>
+                    </div>
                 </div>
                 <div className="flex flex-row justify-start gap-24">
                     {player && opponent && <Grid player={player} opponent={opponent} size={GRID_SIZE} />}
-                    {player && opponent && <Grid player={player} opponent={opponent} size={GRID_SIZE} mask={true} />}
+                    {/* {player && opponent && <Grid player={player} opponent={opponent} size={GRID_SIZE} mask={true} />} */}
                 </div>
                 
             </div>
